@@ -2,6 +2,8 @@ package com.sujith.scheduler.repository;
 
 import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -14,4 +16,6 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     @Query("SELECT j FROM Job j WHERE j.status = :status ORDER BY j.priority DESC, j.createdAt ASC")
     List<Job> findByStatusOrderByPriorityDescCreatedAtAsc(JobStatus status);
+
+    Page<Job> findByStatus(JobStatus status, Pageable pageable);
 }
