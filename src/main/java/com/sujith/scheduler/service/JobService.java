@@ -2,6 +2,8 @@ package com.sujith.scheduler.service;
 
 import com.sujith.scheduler.dto.JobRequest;
 import com.sujith.scheduler.dto.JobResponse;
+import com.sujith.scheduler.exception.InvalidJobStateException;
+import com.sujith.scheduler.exception.JobNotFoundException;
 import com.sujith.scheduler.mapper.JobMapper;
 import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
@@ -13,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Slf4j
@@ -42,10 +43,10 @@ public class JobService {
     public void cancelJob(UUID id) {
         Job job = findJobOrThrow(id);
         if (job.getStatus() == JobStatus.RUNNING) {
-            throw new IllegalStateException("cannot cancel job " + id + " because it is currently running");
+            throw new InvalidJobStateException("cannot cancel job " + id + " because it is currently running");
         }
         if (TERMINAL_STATUSES.contains(job.getStatus())) {
-            throw new IllegalStateException("cannot cancel job " + id + " because it is already in terminal status " + job.getStatus());
+            throw new InvalidJobStateException("cannot cancel job " + id + " because it is already in terminal status " + job.getStatus());
         }
         job.setStatus(JobStatus.CANCELLED);
         jobRepository.save(job);
@@ -61,6 +62,6 @@ public class JobService {
 
     private Job findJobOrThrow(UUID id) {
         return jobRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("job not found: " + id));
+                .orElseThrow(() -> new JobNotFoundException(id));
     }
 }
