@@ -26,11 +26,15 @@ public class JobService {
             JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.DEAD_LETTER);
 
     private final JobRepository jobRepository;
+    private final JobQueueService jobQueueService;
 
     public JobResponse submitJob(JobRequest request) {
         Job job = JobMapper.toEntity(request);
         job.setStatus(JobStatus.PENDING);
         Job saved = jobRepository.save(job);
+        saved.setStatus(JobStatus.QUEUED);
+        saved = jobRepository.save(saved);
+        jobQueueService.enqueue(saved);
         log.info("submitted job {} with status {}", saved.getId(), saved.getStatus());
         return JobMapper.toResponse(saved);
     }
