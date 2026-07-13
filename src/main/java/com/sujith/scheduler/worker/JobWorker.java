@@ -91,10 +91,10 @@ public class JobWorker {
             log.info("scheduled retry {}/{} for job {} with backoff {}ms",
                     job.getRetryCount(), job.getMaxRetries(), job.getId(), backoffMillis);
         } else {
-            job.setStatus(JobStatus.FAILED);
+            job.setStatus(JobStatus.DEAD_LETTER);
             job.setErrorMessage(e.getMessage());
             jobRepository.save(job);
-            log.warn("job {} failed permanently after {} retries", job.getId(), job.getRetryCount());
+            log.warn("job {} moved to dead letter queue after {} retries", job.getId(), job.getRetryCount());
         }
     }
 }

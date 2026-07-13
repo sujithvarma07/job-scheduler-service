@@ -51,4 +51,14 @@ public class JobController {
             Pageable pageable) {
         return ResponseEntity.ok(jobService.listJobs(status, pageable));
     }
+
+    @GetMapping("/dead-letter")
+    public ResponseEntity<Page<JobResponse>> listDeadLetterJobs(Pageable pageable) {
+        return ResponseEntity.ok(jobService.listDeadLetterJobs(pageable));
+    }
+
+    @PostMapping("/{id}/requeue")
+    public ResponseEntity<JobResponse> requeueJob(@PathVariable UUID id) {
+        return ResponseEntity.ok(jobService.requeueJob(id));
+    }
 }

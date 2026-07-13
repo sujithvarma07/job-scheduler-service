@@ -64,6 +64,24 @@ public class JobService {
         return jobs.map(JobMapper::toResponse);
     }
 
+    public Page<JobResponse> listDeadLetterJobs(Pageable pageable) {
+        return jobRepository.findByStatus(JobStatus.DEAD_LETTER, pageable).map(JobMapper::toResponse);
+    }
+
+    public JobResponse requeueJob(UUID id) {
+        Job job = findJobOrThrow(id);
+        if (job.getStatus() != JobStatus.DEAD_LETTER) {
+            throw new InvalidJobStateException("cannot requeue job " + id + " because it is not in dead letter status, current status is " + job.getStatus());
+        }
+        job.setRetryCount(0);
+        job.setErrorMessage(null);
+        job.setStatus(JobStatus.QUEUED);
+        Job saved = jobRepository.save(job);
+        jobQueueService.enqueue(saved);
+        log.info("requeued dead letter job {}", id);
+        return JobMapper.toResponse(saved);
+    }
+
     private Job findJobOrThrow(UUID id) {
         return jobRepository.findById(id)
                 .orElseThrow(() -> new JobNotFoundException(id));
