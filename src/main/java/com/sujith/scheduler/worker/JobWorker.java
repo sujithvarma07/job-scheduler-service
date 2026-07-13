@@ -5,6 +5,7 @@ import com.sujith.scheduler.model.JobStatus;
 import com.sujith.scheduler.repository.JobRepository;
 import com.sujith.scheduler.service.DistributedLockService;
 import com.sujith.scheduler.service.JobQueueService;
+import com.sujith.scheduler.util.RetryUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -71,6 +72,29 @@ public class JobWorker {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("execution of job {} was interrupted", job.getId());
+        } catch (Exception e) {
+            handleFailure(job, e);
+        }
+    }
+
+    private void handleFailure(Job job, Exception e) {
+        log.error("execution of job {} failed: {}", job.getId(), e.getMessage());
+
+        if (job.getRetryCount() < job.getMaxRetries()) {
+            job.setRetryCount(job.getRetryCount() + 1);
+            job.setStatus(JobStatus.QUEUED);
+            job.setErrorMessage(e.getMessage());
+            jobRepository.save(job);
+
+            double backoffMillis = RetryUtil.calculateBackoffScore(job.getRetryCount());
+            jobQueueService.enqueueWithDelay(job, backoffMillis);
+            log.info("scheduled retry {}/{} for job {} with backoff {}ms",
+                    job.getRetryCount(), job.getMaxRetries(), job.getId(), backoffMillis);
+        } else {
+            job.setStatus(JobStatus.FAILED);
+            job.setErrorMessage(e.getMessage());
+            jobRepository.save(job);
+            log.warn("job {} failed permanently after {} retries", job.getId(), job.getRetryCount());
         }
     }
 }

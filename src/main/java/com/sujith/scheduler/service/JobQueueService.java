@@ -33,6 +33,20 @@ public class JobQueueService {
     }
 
     /**
+     * Re-adds a job to the priority queue with an additional delay applied on top of its
+     * normal priority score. Used when retrying a failed job with exponential backoff so
+     * that it is not picked up again immediately.
+     *
+     * @param job         the job to re-enqueue
+     * @param delayMillis the additional delay, in milliseconds, to add to the job's score
+     */
+    public void enqueueWithDelay(Job job, double delayMillis) {
+        double score = computeScore(job.getPriority()) + delayMillis;
+        redisTemplate.opsForZSet().add(QUEUE_KEY, job.getId().toString(), score);
+        log.debug("re-enqueued job {} with retry delay {}ms, score {}", job.getId(), delayMillis, score);
+    }
+
+    /**
      * Removes and returns the id of the highest priority job in the queue, if any.
      *
      * @return the job id with the lowest score, or empty if the queue is empty
