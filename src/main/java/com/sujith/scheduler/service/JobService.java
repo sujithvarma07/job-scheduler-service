@@ -14,7 +14,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -68,6 +70,14 @@ public class JobService {
 
     public Page<JobResponse> listDeadLetterJobs(Pageable pageable) {
         return jobRepository.findByStatus(JobStatus.DEAD_LETTER, pageable).map(JobMapper::toResponse);
+    }
+
+    public Map<JobStatus, Long> getJobStats() {
+        Map<JobStatus, Long> stats = new EnumMap<>(JobStatus.class);
+        for (Object[] row : jobRepository.countJobsGroupedByStatus()) {
+            stats.put((JobStatus) row[0], (Long) row[1]);
+        }
+        return stats;
     }
 
     public JobResponse requeueJob(UUID id) {

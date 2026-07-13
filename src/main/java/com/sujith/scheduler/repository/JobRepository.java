@@ -18,4 +18,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     List<Job> findByStatusOrderByPriorityDescCreatedAtAsc(JobStatus status);
 
     Page<Job> findByStatus(JobStatus status, Pageable pageable);
+
+    List<Job> findByStatusIn(List<JobStatus> statuses);
+
+    @Query("SELECT j.status, COUNT(j) FROM Job j GROUP BY j.status")
+    List<Object[]> countJobsGroupedByStatus();
 }

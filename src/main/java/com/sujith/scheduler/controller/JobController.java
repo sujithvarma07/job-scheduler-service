@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -60,5 +61,10 @@ public class JobController {
     @PostMapping("/{id}/requeue")
     public ResponseEntity<JobResponse> requeueJob(@PathVariable UUID id) {
         return ResponseEntity.ok(jobService.requeueJob(id));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<JobStatus, Long>> getJobStats() {
+        return ResponseEntity.ok(jobService.getJobStats());
     }
 }

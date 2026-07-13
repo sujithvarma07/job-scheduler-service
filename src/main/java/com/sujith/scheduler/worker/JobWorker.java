@@ -58,6 +58,11 @@ public class JobWorker {
         }
 
         Job job = maybeJob.get();
+        if (job.getStatus() == JobStatus.CANCELLED) {
+            log.info("job {} was cancelled, skipping execution", job.getId());
+            return;
+        }
+
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(Instant.now());
         jobRepository.save(job);
