@@ -4,6 +4,7 @@ import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
 import com.sujith.scheduler.repository.JobRepository;
 import com.sujith.scheduler.service.DistributedLockService;
+import com.sujith.scheduler.service.JobEventProducer;
 import com.sujith.scheduler.service.JobQueueService;
 import com.sujith.scheduler.util.RetryUtil;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class JobWorker {
     private final JobQueueService jobQueueService;
     private final DistributedLockService distributedLockService;
     private final JobRepository jobRepository;
+    private final JobEventProducer jobEventProducer;
 
     @Scheduled(fixedDelayString = "${scheduler.queue.poll-interval-ms}")
     public void pollAndExecute() {
@@ -59,6 +61,7 @@ public class JobWorker {
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(Instant.now());
         jobRepository.save(job);
+        jobEventProducer.publishJobStarted(job);
         log.info("started job {} ({})", job.getId(), job.getName());
 
         try {
@@ -68,6 +71,7 @@ public class JobWorker {
             job.setStatus(JobStatus.COMPLETED);
             job.setCompletedAt(Instant.now());
             jobRepository.save(job);
+            jobEventProducer.publishJobCompleted(job);
             log.info("completed job {}", job.getId());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -88,12 +92,14 @@ public class JobWorker {
 
             double backoffMillis = RetryUtil.calculateBackoffScore(job.getRetryCount());
             jobQueueService.enqueueWithDelay(job, backoffMillis);
+            jobEventProducer.publishJobFailed(job);
             log.info("scheduled retry {}/{} for job {} with backoff {}ms",
                     job.getRetryCount(), job.getMaxRetries(), job.getId(), backoffMillis);
         } else {
             job.setStatus(JobStatus.DEAD_LETTER);
             job.setErrorMessage(e.getMessage());
             jobRepository.save(job);
+            jobEventProducer.publishJobFailed(job);
             log.warn("job {} moved to dead letter queue after {} retries", job.getId(), job.getRetryCount());
         }
     }

@@ -27,6 +27,7 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final JobQueueService jobQueueService;
+    private final JobEventProducer jobEventProducer;
 
     public JobResponse submitJob(JobRequest request) {
         Job job = JobMapper.toEntity(request);
@@ -35,6 +36,7 @@ public class JobService {
         saved.setStatus(JobStatus.QUEUED);
         saved = jobRepository.save(saved);
         jobQueueService.enqueue(saved);
+        jobEventProducer.publishJobCreated(saved);
         log.info("submitted job {} with status {}", saved.getId(), saved.getStatus());
         return JobMapper.toResponse(saved);
     }
