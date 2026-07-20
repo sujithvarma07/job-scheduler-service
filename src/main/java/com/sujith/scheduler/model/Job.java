@@ -44,6 +44,10 @@ public class Job {
     @Column(nullable = false)
     private int retryCount = 0;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private int timeoutSeconds = 300;
+
     private Instant scheduledAt;
 
     private Instant startedAt;

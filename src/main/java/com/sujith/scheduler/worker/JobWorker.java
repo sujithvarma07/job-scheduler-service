@@ -63,8 +63,9 @@ public class JobWorker {
             return;
         }
 
+        Instant startTime = Instant.now();
         job.setStatus(JobStatus.RUNNING);
-        job.setStartedAt(Instant.now());
+        job.setStartedAt(startTime);
         jobRepository.save(job);
         jobEventProducer.publishJobStarted(job);
         log.info("started job {} ({})", job.getId(), job.getName());
@@ -72,6 +73,12 @@ public class JobWorker {
         try {
             // simulated execution until real job handlers are wired up
             Thread.sleep(1000);
+
+            long elapsedSeconds = Instant.now().getEpochSecond() - startTime.getEpochSecond();
+            if (elapsedSeconds > job.getTimeoutSeconds()) {
+                handleTimeout(job);
+                return;
+            }
 
             job.setStatus(JobStatus.COMPLETED);
             job.setCompletedAt(Instant.now());
@@ -84,6 +91,15 @@ public class JobWorker {
         } catch (Exception e) {
             handleFailure(job, e);
         }
+    }
+
+    private void handleTimeout(Job job) {
+        job.setStatus(JobStatus.FAILED);
+        job.setErrorMessage("job timed out");
+        job.setCompletedAt(Instant.now());
+        jobRepository.save(job);
+        jobEventProducer.publishJobFailed(job);
+        log.warn("job {} timed out after {} seconds", job.getId(), job.getTimeoutSeconds());
     }
 
     private void handleFailure(Job job, Exception e) {

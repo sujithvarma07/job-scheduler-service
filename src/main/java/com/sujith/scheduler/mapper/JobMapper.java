@@ -19,6 +19,7 @@ public final class JobMapper {
                 .priority(job.getPriority())
                 .maxRetries(job.getMaxRetries())
                 .retryCount(job.getRetryCount())
+                .timeoutSeconds(job.getTimeoutSeconds())
                 .scheduledAt(job.getScheduledAt())
                 .startedAt(job.getStartedAt())
                 .completedAt(job.getCompletedAt())
@@ -34,6 +35,7 @@ public final class JobMapper {
                 .status(JobStatus.PENDING)
                 .priority(request.getPriority())
                 .maxRetries(request.getMaxRetries())
+                .timeoutSeconds(request.getTimeoutSeconds())
                 .scheduledAt(request.getScheduledAt())
                 .build();
     }

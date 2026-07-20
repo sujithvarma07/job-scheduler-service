@@ -21,6 +21,10 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     List<Job> findByStatusIn(List<JobStatus> statuses);
 
+    @Query("SELECT j FROM Job j WHERE j.status = com.sujith.scheduler.model.JobStatus.RUNNING "
+            + "AND j.startedAt IS NOT NULL")
+    List<Job> findRunningJobs();
+
     @Query("SELECT j.status, COUNT(j) FROM Job j GROUP BY j.status")
     List<Object[]> countJobsGroupedByStatus();
 }

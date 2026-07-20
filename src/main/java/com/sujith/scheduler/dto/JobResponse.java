@@ -25,6 +25,8 @@ public class JobResponse {
 
     private int retryCount;
 
+    private int timeoutSeconds;
+
     private Instant scheduledAt;
 
     private Instant startedAt;

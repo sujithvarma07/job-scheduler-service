@@ -24,4 +24,6 @@ public class JobRequest {
     private Instant scheduledAt;
 
     private int maxRetries = 3;
+
+    private int timeoutSeconds = 300;
 }
