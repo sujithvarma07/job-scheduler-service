@@ -1,5 +1,6 @@
 package com.sujith.scheduler.worker;
 
+import com.sujith.scheduler.metrics.JobMetrics;
 import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
 import com.sujith.scheduler.repository.JobRepository;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +30,7 @@ public class JobWorker {
     private final DistributedLockService distributedLockService;
     private final JobRepository jobRepository;
     private final JobEventProducer jobEventProducer;
+    private final JobMetrics jobMetrics;
 
     @Scheduled(fixedDelayString = "${scheduler.queue.poll-interval-ms}")
     public void pollAndExecute() {
@@ -84,6 +87,8 @@ public class JobWorker {
             job.setCompletedAt(Instant.now());
             jobRepository.save(job);
             jobEventProducer.publishJobCompleted(job);
+            jobMetrics.incrementCompleted();
+            jobMetrics.recordExecutionTime(Duration.between(startTime, job.getCompletedAt()).toMillis());
             log.info("completed job {}", job.getId());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -99,11 +104,15 @@ public class JobWorker {
         job.setCompletedAt(Instant.now());
         jobRepository.save(job);
         jobEventProducer.publishJobFailed(job);
+        jobMetrics.incrementFailed();
+        jobMetrics.recordExecutionTime(Duration.between(job.getStartedAt(), job.getCompletedAt()).toMillis());
         log.warn("job {} timed out after {} seconds", job.getId(), job.getTimeoutSeconds());
     }
 
     private void handleFailure(Job job, Exception e) {
         log.error("execution of job {} failed: {}", job.getId(), e.getMessage());
+        jobMetrics.incrementFailed();
+        jobMetrics.recordExecutionTime(Duration.between(job.getStartedAt(), Instant.now()).toMillis());
 
         if (job.getRetryCount() < job.getMaxRetries()) {
             job.setRetryCount(job.getRetryCount() + 1);

@@ -5,6 +5,7 @@ import com.sujith.scheduler.dto.JobResponse;
 import com.sujith.scheduler.exception.InvalidJobStateException;
 import com.sujith.scheduler.exception.JobNotFoundException;
 import com.sujith.scheduler.mapper.JobMapper;
+import com.sujith.scheduler.metrics.JobMetrics;
 import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
 import com.sujith.scheduler.repository.JobRepository;
@@ -30,6 +31,7 @@ public class JobService {
     private final JobRepository jobRepository;
     private final JobQueueService jobQueueService;
     private final JobEventProducer jobEventProducer;
+    private final JobMetrics jobMetrics;
 
     public JobResponse submitJob(JobRequest request) {
         Job job = JobMapper.toEntity(request);
@@ -39,6 +41,7 @@ public class JobService {
         saved = jobRepository.save(saved);
         jobQueueService.enqueue(saved);
         jobEventProducer.publishJobCreated(saved);
+        jobMetrics.incrementSubmitted();
         log.info("submitted job {} with status {}", saved.getId(), saved.getStatus());
         return JobMapper.toResponse(saved);
     }
