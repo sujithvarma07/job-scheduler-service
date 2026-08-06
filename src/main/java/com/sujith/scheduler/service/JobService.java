@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -36,6 +37,15 @@ public class JobService {
     private final JobMetrics jobMetrics;
 
     public JobResponse submitJob(JobRequest request) {
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            Optional<Job> existing = jobRepository.findByIdempotencyKey(request.getIdempotencyKey());
+            if (existing.isPresent()) {
+                log.info("job with idempotency key {} already exists, returning existing job {}",
+                        request.getIdempotencyKey(), existing.get().getId());
+                return JobMapper.toResponse(existing.get());
+            }
+        }
+
         Job job = JobMapper.toEntity(request);
         job.setStatus(JobStatus.PENDING);
         Job saved = jobRepository.save(job);

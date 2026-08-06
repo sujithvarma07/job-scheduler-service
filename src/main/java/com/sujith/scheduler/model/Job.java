@@ -60,6 +60,9 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "idempotency_key", unique = true)
+    private String idempotencyKey;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -28,4 +29,6 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
 
     @Query("SELECT j.status, COUNT(j) FROM Job j GROUP BY j.status")
     List<Object[]> countJobsGroupedByStatus();
+
+    Optional<Job> findByIdempotencyKey(String idempotencyKey);
 }

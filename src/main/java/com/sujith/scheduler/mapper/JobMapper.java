@@ -25,6 +25,7 @@ public final class JobMapper {
                 .completedAt(job.getCompletedAt())
                 .createdAt(job.getCreatedAt())
                 .errorMessage(job.getErrorMessage())
+                .idempotencyKey(job.getIdempotencyKey())
                 .build();
     }
 
@@ -37,6 +38,7 @@ public final class JobMapper {
                 .maxRetries(request.getMaxRetries())
                 .timeoutSeconds(request.getTimeoutSeconds())
                 .scheduledAt(request.getScheduledAt())
+                .idempotencyKey(request.getIdempotencyKey())
                 .build();
     }
 }

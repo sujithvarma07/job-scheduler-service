@@ -26,4 +26,6 @@ public class JobRequest {
     private int maxRetries = 3;
 
     private int timeoutSeconds = 300;
+
+    private String idempotencyKey;
 }

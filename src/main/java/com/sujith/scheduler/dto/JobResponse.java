@@ -36,4 +36,6 @@ public class JobResponse {
     private Instant createdAt;
 
     private String errorMessage;
+
+    private String idempotencyKey;
 }
