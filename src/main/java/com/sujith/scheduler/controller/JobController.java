@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,8 +50,12 @@ public class JobController {
     @GetMapping
     public ResponseEntity<Page<JobResponse>> listJobs(
             @RequestParam(required = false) JobStatus status,
+            @RequestParam(required = false) Integer minPriority,
+            @RequestParam(required = false) Integer maxPriority,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
             Pageable pageable) {
-        return ResponseEntity.ok(jobService.listJobs(status, pageable));
+        return ResponseEntity.ok(jobService.listJobs(status, minPriority, maxPriority, from, to, pageable));
     }
 
     @GetMapping("/dead-letter")

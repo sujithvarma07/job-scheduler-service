@@ -9,12 +9,14 @@ import com.sujith.scheduler.metrics.JobMetrics;
 import com.sujith.scheduler.model.Job;
 import com.sujith.scheduler.model.JobStatus;
 import com.sujith.scheduler.repository.JobRepository;
+import com.sujith.scheduler.repository.JobSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,19 @@ public class JobService {
                 ? jobRepository.findAll(pageable)
                 : jobRepository.findByStatus(status, pageable);
         return jobs.map(JobMapper::toResponse);
+    }
+
+    public Page<JobResponse> listJobs(JobStatus status,
+                                       Integer minPriority,
+                                       Integer maxPriority,
+                                       Instant from,
+                                       Instant to,
+                                       Pageable pageable) {
+        if (minPriority == null && maxPriority == null && from == null && to == null) {
+            return listJobs(status, pageable);
+        }
+        var spec = JobSpecification.withFilters(status, minPriority, maxPriority, from, to);
+        return jobRepository.findAll(spec, pageable).map(JobMapper::toResponse);
     }
 
     public Page<JobResponse> listDeadLetterJobs(Pageable pageable) {
