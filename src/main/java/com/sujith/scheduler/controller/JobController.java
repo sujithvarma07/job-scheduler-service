@@ -1,5 +1,7 @@
 package com.sujith.scheduler.controller;
 
+import com.sujith.scheduler.dto.BatchJobRequest;
+import com.sujith.scheduler.dto.BatchJobResponse;
 import com.sujith.scheduler.dto.JobRequest;
 import com.sujith.scheduler.dto.JobResponse;
 import com.sujith.scheduler.model.JobStatus;
@@ -34,6 +36,11 @@ public class JobController {
     public ResponseEntity<JobResponse> submitJob(@Valid @RequestBody JobRequest request) {
         JobResponse response = jobService.submitJob(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<BatchJobResponse> submitBatch(@Valid @RequestBody BatchJobRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(jobService.submitBatch(request));
     }
 
     @GetMapping("/{id}")

@@ -1,5 +1,7 @@
 package com.sujith.scheduler.service;
 
+import com.sujith.scheduler.dto.BatchJobRequest;
+import com.sujith.scheduler.dto.BatchJobResponse;
 import com.sujith.scheduler.dto.JobRequest;
 import com.sujith.scheduler.dto.JobResponse;
 import com.sujith.scheduler.exception.InvalidJobStateException;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +59,26 @@ public class JobService {
         jobMetrics.incrementSubmitted();
         log.info("submitted job {} with status {}", saved.getId(), saved.getStatus());
         return JobMapper.toResponse(saved);
+    }
+
+    public BatchJobResponse submitBatch(BatchJobRequest batchRequest) {
+        List<JobResponse> submitted = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        List<JobRequest> jobs = batchRequest.getJobs();
+        for (int i = 0; i < jobs.size(); i++) {
+            JobRequest jobRequest = jobs.get(i);
+            try {
+                submitted.add(submitJob(jobRequest));
+            } catch (Exception e) {
+                log.warn("failed to submit job at batch index {}: {}", i, e.getMessage());
+                errors.add("job at index " + i + " (" + jobRequest.getName() + "): " + e.getMessage());
+            }
+        }
+        log.info("processed batch of {} jobs: {} submitted, {} failed", jobs.size(), submitted.size(), errors.size());
+        return BatchJobResponse.builder()
+                .submitted(submitted)
+                .errors(errors)
+                .build();
     }
 
     public JobResponse getJob(UUID id) {
