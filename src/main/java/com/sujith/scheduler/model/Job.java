@@ -63,6 +63,9 @@ public class Job {
     @Column(name = "idempotency_key", unique = true)
     private String idempotencyKey;
 
+    @Column(name = "depends_on_job_id")
+    private UUID dependsOnJobId;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

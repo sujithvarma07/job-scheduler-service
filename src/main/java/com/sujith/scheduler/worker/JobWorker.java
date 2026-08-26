@@ -25,6 +25,7 @@ public class JobWorker {
 
     private static final String LOCK_PREFIX = "job:lock:";
     private static final long LOCK_TTL_SECONDS = 60;
+    private static final double DEPENDENCY_RECHECK_DELAY_MILLIS = 5000;
 
     private final JobQueueService jobQueueService;
     private final DistributedLockService distributedLockService;
@@ -66,6 +67,13 @@ public class JobWorker {
             return;
         }
 
+        if (isWaitingOnDependency(job)) {
+            jobQueueService.enqueueWithDelay(job, DEPENDENCY_RECHECK_DELAY_MILLIS);
+            log.debug("job {} is waiting on dependency {}, re-enqueued with delay",
+                    job.getId(), job.getDependsOnJobId());
+            return;
+        }
+
         Instant startTime = Instant.now();
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(startTime);
@@ -96,6 +104,15 @@ public class JobWorker {
         } catch (Exception e) {
             handleFailure(job, e);
         }
+    }
+
+    private boolean isWaitingOnDependency(Job job) {
+        if (job.getDependsOnJobId() == null) {
+            return false;
+        }
+        return jobRepository.findById(job.getDependsOnJobId())
+                .map(dependency -> dependency.getStatus() != JobStatus.COMPLETED)
+                .orElse(false);
     }
 
     private void handleTimeout(Job job) {

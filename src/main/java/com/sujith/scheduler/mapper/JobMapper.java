@@ -26,6 +26,7 @@ public final class JobMapper {
                 .createdAt(job.getCreatedAt())
                 .errorMessage(job.getErrorMessage())
                 .idempotencyKey(job.getIdempotencyKey())
+                .dependsOnJobId(job.getDependsOnJobId())
                 .build();
     }
 
@@ -39,6 +40,7 @@ public final class JobMapper {
                 .timeoutSeconds(request.getTimeoutSeconds())
                 .scheduledAt(request.getScheduledAt())
                 .idempotencyKey(request.getIdempotencyKey())
+                .dependsOnJobId(request.getDependsOnJobId())
                 .build();
     }
 }

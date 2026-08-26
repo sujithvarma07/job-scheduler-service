@@ -49,6 +49,10 @@ public class JobService {
             }
         }
 
+        if (request.getDependsOnJobId() != null && !jobRepository.existsById(request.getDependsOnJobId())) {
+            throw new JobNotFoundException(request.getDependsOnJobId());
+        }
+
         Job job = JobMapper.toEntity(request);
         job.setStatus(JobStatus.PENDING);
         Job saved = jobRepository.save(job);

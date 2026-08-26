@@ -38,4 +38,6 @@ public class JobResponse {
     private String errorMessage;
 
     private String idempotencyKey;
+
+    private UUID dependsOnJobId;
 }

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 public class JobRequest {
@@ -28,4 +29,6 @@ public class JobRequest {
     private int timeoutSeconds = 300;
 
     private String idempotencyKey;
+
+    private UUID dependsOnJobId;
 }
