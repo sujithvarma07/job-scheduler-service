@@ -1,0 +1,17 @@
+target/
+.git/
+.gitignore
+*.md
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
+logs/
+.env
+.env.local
+application-local.yml
+setup.command
+push.command
+fix.command
+.push_day
