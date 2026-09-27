@@ -66,6 +66,9 @@ public class Job {
     @Column(name = "depends_on_job_id")
     private UUID dependsOnJobId;
 
+    @Column(name = "cron_expression")
+    private String cronExpression;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

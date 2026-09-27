@@ -31,4 +31,6 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     List<Object[]> countJobsGroupedByStatus();
 
     Optional<Job> findByIdempotencyKey(String idempotencyKey);
+
+    List<Job> findByCronExpressionIsNotNullAndStatus(JobStatus status);
 }
