@@ -8,19 +8,23 @@ import com.sujith.scheduler.service.DistributedLockService;
 import com.sujith.scheduler.service.JobEventProducer;
 import com.sujith.scheduler.service.JobQueueService;
 import com.sujith.scheduler.util.RetryUtil;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class JobWorker {
 
     private static final String LOCK_PREFIX = "job:lock:";
@@ -32,25 +36,76 @@ public class JobWorker {
     private final JobRepository jobRepository;
     private final JobEventProducer jobEventProducer;
     private final JobMetrics jobMetrics;
+    private final ThreadPoolTaskExecutor jobExecutor;
+    private final Semaphore concurrencyLimit;
 
+    public JobWorker(JobQueueService jobQueueService,
+                     DistributedLockService distributedLockService,
+                     JobRepository jobRepository,
+                     JobEventProducer jobEventProducer,
+                     JobMetrics jobMetrics,
+                     @Qualifier("jobExecutor") ThreadPoolTaskExecutor jobExecutor,
+                     @Value("${scheduler.worker.pool-size}") int poolSize) {
+        this.jobQueueService = jobQueueService;
+        this.distributedLockService = distributedLockService;
+        this.jobRepository = jobRepository;
+        this.jobEventProducer = jobEventProducer;
+        this.jobMetrics = jobMetrics;
+        this.jobExecutor = jobExecutor;
+        this.concurrencyLimit = new Semaphore(poolSize);
+    }
+
+    /**
+     * Dequeues as many jobs as there are free worker slots and hands each one to the
+     * job executor. The semaphore caps in-flight executions at the configured pool size,
+     * so the poller never outruns the thread pool.
+     */
     @Scheduled(fixedDelayString = "${scheduler.queue.poll-interval-ms}")
     public void pollAndExecute() {
-        Optional<UUID> next = jobQueueService.dequeue();
-        if (next.isEmpty()) {
-            return;
-        }
+        while (concurrencyLimit.tryAcquire()) {
+            Optional<UUID> next = jobQueueService.dequeue();
+            if (next.isEmpty()) {
+                concurrencyLimit.release();
+                return;
+            }
 
-        UUID jobId = next.get();
-        String lockKey = LOCK_PREFIX + jobId;
-        if (!distributedLockService.acquireLock(lockKey, LOCK_TTL_SECONDS)) {
-            log.debug("could not acquire lock for job {}, skipping this cycle", jobId);
-            return;
-        }
+            UUID jobId = next.get();
+            String lockKey = LOCK_PREFIX + jobId;
+            if (!distributedLockService.acquireLock(lockKey, LOCK_TTL_SECONDS)) {
+                log.debug("could not acquire lock for job {}, skipping", jobId);
+                concurrencyLimit.release();
+                continue;
+            }
 
+            dispatch(jobId, lockKey);
+        }
+    }
+
+    private void dispatch(UUID jobId, String lockKey) {
+        jobMetrics.incrementActiveWorkers();
         try {
-            executeJob(jobId);
-        } finally {
+            CompletableFuture.supplyAsync(() -> {
+                executeJob(jobId);
+                return jobId;
+            }, jobExecutor).whenComplete((id, error) -> {
+                if (error != null) {
+                    log.error("unexpected error while executing job {}: {}", jobId, error.getMessage());
+                }
+                releaseSlot(lockKey);
+            });
+        } catch (TaskRejectedException e) {
+            log.warn("executor rejected job {}, returning it to the queue", jobId);
+            jobRepository.findById(jobId).ifPresent(jobQueueService::enqueue);
+            releaseSlot(lockKey);
+        }
+    }
+
+    private void releaseSlot(String lockKey) {
+        try {
             distributedLockService.releaseLock(lockKey);
+        } finally {
+            jobMetrics.decrementActiveWorkers();
+            concurrencyLimit.release();
         }
     }
 

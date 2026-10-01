@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Central registration point for job throughput and queue depth metrics, exposed
@@ -23,6 +24,7 @@ public class JobMetrics {
     private Counter jobsCompletedCounter;
     private Counter jobsFailedCounter;
     private Timer jobsExecutionTimer;
+    private final AtomicInteger activeWorkers = new AtomicInteger();
 
     public JobMetrics(MeterRegistry meterRegistry, JobQueueService jobQueueService) {
         this.meterRegistry = meterRegistry;
@@ -48,6 +50,8 @@ public class JobMetrics {
                 .register(meterRegistry);
 
         meterRegistry.gauge("jobs.queue.size", jobQueueService, JobQueueService::queueSize);
+
+        meterRegistry.gauge("jobs.concurrent.active", activeWorkers);
     }
 
     public void incrementSubmitted() {
@@ -64,5 +68,13 @@ public class JobMetrics {
 
     public void recordExecutionTime(long durationMillis) {
         jobsExecutionTimer.record(durationMillis, TimeUnit.MILLISECONDS);
+    }
+
+    public void incrementActiveWorkers() {
+        activeWorkers.incrementAndGet();
+    }
+
+    public void decrementActiveWorkers() {
+        activeWorkers.decrementAndGet();
     }
 }
