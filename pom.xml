@@ -14,7 +14,7 @@
 
     <groupId>com.sujith</groupId>
     <artifactId>job-scheduler-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>job-scheduler-service</name>
     <description>Distributed job scheduling service with priority queuing and Kafka event streaming</description>
 
